@@ -263,6 +263,14 @@ impl PolyglotTree {
         None
     }
 
+    fn get_polyglot_call_c(&self, node: Node) -> Option<&str> {
+        let child = node.child(0)?;
+        if node.kind().eq("call_expression") && child.kind().eq("identifier") {
+            return Some(self.node_to_code(child));
+        }
+        None
+    }
+
     fn is_polyglot_eval_call(&self, node: Node) -> bool {
         match self.language {
             Language::Python => {
@@ -273,6 +281,7 @@ impl PolyglotTree {
                 Some("Polyglot.eval") | Some("Polyglot.evalFile")
             ),
             Language::Java => matches!(self.get_polyglot_call_java(node), Some("eval")),
+            Language::C => matches!(self.get_polyglot_call_c(node), Some("polyglot_eval")),
         }
     }
 
@@ -286,6 +295,7 @@ impl PolyglotTree {
                 matches!(self.get_polyglot_call_js(node), Some("Polyglot.import"))
             }
             Language::Java => matches!(self.get_polyglot_call_java(node), Some("getMember")),
+            Language::C => matches!(self.get_polyglot_call_c(node), Some("polyglot_import")),
         }
     }
 
@@ -299,6 +309,7 @@ impl PolyglotTree {
                 matches!(self.get_polyglot_call_js(node), Some("Polyglot.export"))
             }
             Language::Java => matches!(self.get_polyglot_call_java(node), Some("putMember")),
+            Language::C => matches!(self.get_polyglot_call_c(node), Some("polyglot_export")),
         }
     }
 
@@ -309,6 +320,7 @@ impl PolyglotTree {
             Language::Python => self.make_subtree_python(&node),
             Language::JavaScript => self.make_subtree_js(&node),
             Language::Java => self.make_subtree_java(&node),
+            Language::C => self.make_subtree_c(&node),
         };
 
         subtree = match result {
@@ -526,6 +538,26 @@ impl PolyglotTree {
         // Java uses positional arguments, so they will always be accessible with the same route.
         let arg1 = node.child(3)?.child(1)?; // language
         let arg2 = node.child(3)?.child(3)?; // code
+
+        let s = util::strip_quotes(self.node_to_code(arg1));
+
+        let new_lang = match util::language_string_to_enum(&s) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("Could not convert argument {s} to language due to error: {e}",);
+                return None;
+            }
+        };
+
+        let new_code = util::strip_quotes(self.node_to_code(arg2));
+        Self::from_directory(new_code, new_lang, self.working_dir.clone())
+    }
+
+    fn make_subtree_c(&self, node: &Node) -> Option<PolyglotTree> {
+        // C also uses positional arguments
+        let arg1 = node.child(1)?.child(1)?; // language
+        let arg2 = node.child(1)?.child(3)?; // code
+
 
         let s = util::strip_quotes(self.node_to_code(arg1));
 

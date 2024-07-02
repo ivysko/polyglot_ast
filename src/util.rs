@@ -10,6 +10,7 @@ pub enum Language {
     JavaScript,
     /// Warning: Java language support is very partial and limited to string literal usage. Keep this in mind when writing your programs
     Java,
+    C,
 }
 
 /// Returns a String identical to the provided slice but with leading and trailing characters removed.
@@ -80,6 +81,7 @@ pub fn language_enum_to_treesitter(lang: &Language) -> tree_sitter::Language {
         Language::Python => tree_sitter_python::language(),
         Language::JavaScript => tree_sitter_javascript::language(),
         Language::Java => tree_sitter_java::language(),
+        Language::C => tree_sitter_c::language(),
     }
 }
 
@@ -111,6 +113,7 @@ pub fn language_string_to_enum(lang: &str) -> Result<Language, InvalidArgumentEr
         "python" => Ok(Language::Python),
         "js" | "javascript" => Ok(Language::JavaScript),
         "java" => Ok(Language::Java),
+        "c" => Ok(Language::C),
         _ => Err(InvalidArgumentError),
     }
 }

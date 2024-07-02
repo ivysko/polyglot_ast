@@ -80,6 +80,7 @@ impl PolyglotZipper<'_> {
                 },
                 Language::JavaScript => todo!(),
                 Language::Java => todo!(),
+                Language::C => todo!(),
             };
         }
         Err(InvalidArgumentError)
