@@ -281,7 +281,7 @@ impl PolyglotTree {
                 Some("Polyglot.eval") | Some("Polyglot.evalFile")
             ),
             Language::Java => matches!(self.get_polyglot_call_java(node), Some("eval")),
-            Language::C => matches!(self.get_polyglot_call_c(node), Some("polyglot_eval")),
+            Language::C => matches!(self.get_polyglot_call_c(node), Some("polyglot_eval") | Some("polyglot_eval_file")),
         }
     }
 
@@ -554,22 +554,75 @@ impl PolyglotTree {
     }
 
     fn make_subtree_c(&self, node: &Node) -> Option<PolyglotTree> {
+        let call_type = node.child(0)?;
+
         // C also uses positional arguments
         let arg1 = node.child(1)?.child(1)?; // language
         let arg2 = node.child(1)?.child(3)?; // code
 
+        match self.node_to_code(call_type) {
+            "polyglot_eval" => {
+                // Arguments are positional, and always at the same spot
+                let tmp_lang = util::strip_quotes(self.node_to_code(arg1));
+                let tmp_code = util::strip_quotes(self.node_to_code(arg2));
 
-        let s = util::strip_quotes(self.node_to_code(arg1));
+                let new_lang = match util::language_string_to_enum(tmp_lang.as_str()) {
+                    Ok(l) => l,
+                    Err(e) => {
+                        eprintln!(
+                            "Could not convert argument {} to language due to error: {e}",
+                            tmp_lang.as_str()
+                        );
+                        return None;
+                    }
+                };
 
-        let new_lang = match util::language_string_to_enum(&s) {
-            Ok(l) => l,
-            Err(e) => {
-                eprintln!("Could not convert argument {s} to language due to error: {e}",);
-                return None;
+                let new_code = String::from(tmp_code.as_str());
+                Self::from_directory(new_code, new_lang, self.working_dir.clone())
             }
-        };
 
-        let new_code = util::strip_quotes(self.node_to_code(arg2));
-        Self::from_directory(new_code, new_lang, self.working_dir.clone())
+            "polyglot_eval_file" => {
+                let tmp_lang = util::strip_quotes(self.node_to_code(arg1));
+
+                let new_lang = match util::language_string_to_enum(tmp_lang.as_str()) {
+                    Ok(l) => l,
+                    Err(e) => {
+                        eprintln!(
+                            "Could not convert argument {} to language due to error: {e}",
+                            tmp_lang.as_str()
+                        );
+                        return None;
+                    }
+                };
+
+                let tmp_path = util::strip_quotes(self.node_to_code(arg2));
+
+                let mut path = self.working_dir.clone();
+
+                let new_path = match PathBuf::from_str(tmp_path.as_str()) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: could not build subtree for {} because of error {e}",
+                            tmp_path.as_str()
+                        );
+                        return None;
+                    }
+                };
+
+                path.push(new_path);
+
+                Self::from_path(path, new_lang)
+            }
+
+            other => {
+                eprintln!(
+                    "Warning: unable to identify polyglot function call {other} at position {}",
+                    node.start_position()
+                );
+                None
+            }
+        }
+
     }
 }
