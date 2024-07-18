@@ -333,7 +333,7 @@ impl PolyglotTree {
         true // signal everything went right
     }
 
-    fn make_subtree_lang(&self, node: &Node, arg1: Node, arg2: Node, call_type: Option<Node>) -> Option<PolyglotTree> {
+    fn make_subtree_lang(&self, arg1: Node, arg2: Node, call_type: Option<Node>) -> Option<PolyglotTree> {
         let code_eval = "eval";
         let code_eval_file = "evalFile";
 
