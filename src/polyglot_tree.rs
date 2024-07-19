@@ -333,85 +333,132 @@ impl PolyglotTree {
         true // signal everything went right
     }
 
-    fn make_subtree_lang(&self, arg1: Node, arg2: Node, call_type: Option<Node>) -> Option<PolyglotTree> {
+    fn make_subtree_lang(&self, arg1: Node, arg2: Node, call_type: Option<Node>, positional: bool) -> Option<PolyglotTree> {
         let code_eval = "eval";
         let code_eval_file = "evalFile";
 
-        match call_type {
-            None => {
-                let s = util::strip_quotes(self.node_to_code(arg1));
+        if !positional {
+            let mut new_code: Option<String> = None;
+            let mut new_lang: Option<String> = None;
+            let mut path: Option<PathBuf> = None;
 
-                let new_lang = match util::language_string_to_enum(&s) {
+            // Python polyglot calls use a single function and differentiate by argument names, which are mandatory.
+            // We need to check both arguments for each possible case, and then check again at the end we have enough information.
+            self.process_argument(arg1, &mut path, &mut new_lang, &mut new_code)?;
+            self.process_argument(arg2, &mut path, &mut new_lang, &mut new_code)?;
+
+            // We convert the language, if there was one
+            let new_lang = match new_lang {
+                Some(s) => match util::language_string_to_enum(s.as_str()) {
                     Ok(l) => l,
                     Err(e) => {
-                        eprintln!("Could not convert argument {s} to language due to error: {e}",);
+                        eprintln!("Could not convert argument {s} to language due to error: {e}");
                         return None;
                     }
-                };
+                },
+                None => {
+                    eprintln!(
+                        "Warning: no language argument provided for polyglot call"
+                    );
+                    return None;
+                }
+            };
 
-                let new_code = util::strip_quotes(self.node_to_code(arg2));
-                Self::from_directory(new_code, new_lang, self.working_dir.clone())
+            let subtree = match new_code {
+                Some(c) => Self::from_directory(c, new_lang, self.working_dir.clone())?,
+                None => Self::from_path(
+                    // No raw code, check for a path
+                    match path {
+                        Some(p) => p,
+                        None => {
+                            // No path either -> we cant build the tree
+                            eprintln!("Warning:: no path or string argument provided to {{Lang}} polyglot call");
+                            return None;
+                        }
+                    },
+                    new_lang,
+                )?,
+            };
+
+            return Some(subtree);
+        }
+
+        return match call_type {
+            None => {
+                // case where there are two args: lang then code
+
+                match self.make_subtree_dir_positional_args(arg1, arg2) {
+                    Ok(value) => value,
+                    Err(value) => return value,
+                }
             }
             Some(call_type) => {
                 // JavaScript uses a different function for evaluating raw code and files, so we have two cases
                 let eval_type = self.node_to_code(call_type);
+
                 if eval_type == code_eval {
                     // Arguments are positional, and always at the same spot
-                    let tmp_lang = util::strip_quotes(self.node_to_code(arg1));
-                    let tmp_code = util::strip_quotes(self.node_to_code(arg2));
 
-                    let new_lang = match util::language_string_to_enum(tmp_lang.as_str()) {
-                        Ok(l) => l,
-                        Err(e) => {
-                            eprintln!(
-                                "Could not convert argument {} to language due to error: {e}",
-                                tmp_lang.as_str()
-                            );
-                            return None;
-                        }
-                    };
-
-                    let new_code = String::from(tmp_code.as_str());
-                    Self::from_directory(new_code, new_lang, self.working_dir.clone())
-                }
-                else if eval_type == code_eval_file {
-                    let tmp_lang = util::strip_quotes(self.node_to_code(arg1));
-
-                    let new_lang = match util::language_string_to_enum(tmp_lang.as_str()) {
-                        Ok(l) => l,
-                        Err(e) => {
-                            eprintln!(
-                                "Could not convert argument {} to language due to error: {e}",
-                                tmp_lang.as_str()
-                            );
-                            return None;
-                        }
-                    };
-
-                    let tmp_path = util::strip_quotes(self.node_to_code(arg2));
-
-                    let mut path = self.working_dir.clone();
-
-                    let new_path = match PathBuf::from_str(tmp_path.as_str()) {
-                        Ok(p) => p,
-                        Err(e) => {
-                            eprintln!(
-                                "Warning: could not build subtree for {} because of error {e}",
-                                tmp_path.as_str()
-                            );
-                            return None;
-                        }
-                    };
-
-                    path.push(new_path);
-
-                    Self::from_path(path, new_lang)
-                }
-                else { None }
+                    match self.make_subtree_dir_positional_args(arg1, arg2) {
+                        Ok(value) => value,
+                        Err(value) => return value,
+                    }
+                } else if eval_type == code_eval_file {
+                    match self.make_subtree_path_positional_args(arg1, arg2) {
+                        Ok(value) => value,
+                        Err(value) => return value,
+                    }
+                } else { None }
             }
         }
 
         None
+    }
+
+    fn make_subtree_dir_positional_args(&self, arg1: Node, arg2: Node) -> Result<Option<PolyglotTree>, Option<PolyglotTree>> {
+        let lang_s = util::strip_quotes(self.node_to_code(arg1));
+        let new_code = util::strip_quotes(self.node_to_code(arg2));
+
+        let new_lang = match util::language_string_to_enum(&lang_s) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("Could not convert argument {lang_s} to language due to error: {e}", );
+                return Err(None);
+            }
+        };
+
+        Ok(Self::from_directory(new_code, new_lang, self.working_dir.clone()))
+    }
+
+    fn make_subtree_path_positional_args(&self, arg1: Node, arg2: Node) -> Result<Option<PolyglotTree>, Option<PolyglotTree>> {
+        let lang_s = util::strip_quotes(self.node_to_code(arg1));
+
+        let new_lang = match util::language_string_to_enum(&lang_s) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("Could not convert argument {lang_s} to language due to error: {e}", );
+                return Err(None);
+            }
+        };
+
+        let tmp_path = util::strip_quotes(self.node_to_code(arg2));
+
+        let mut path = self.working_dir.clone();
+
+        let new_path = match PathBuf::from_str(tmp_path.as_str()) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!(
+                    "Warning: could not build subtree for {} because of error {e}",
+                    tmp_path.as_str()
+                );
+                return Err(None);
+            }
+        };
+
+        path.push(new_path);
+
+        Ok(Self::from_path(path, new_lang))
     }
 
     fn make_subtree_python(&self, node: &Node) -> Option<PolyglotTree> {
@@ -424,89 +471,8 @@ impl PolyglotTree {
 
         // Python polyglot calls use a single function and differentiate by argument names, which are mandatory.
         // We need to check both arguments for each possible case, and then check again at the end we have enough information.
-        match self.node_to_code(arg1) {
-            "path" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg1.next_sibling()?.next_sibling()?));
-                path = Some(self.working_dir.clone());
-                let new_path = match PathBuf::from_str(tmp.as_str()) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        eprintln!(
-                            "Warning: could not build subtree for {} because of error {e}",
-                            tmp.as_str()
-                        );
-                        return None;
-                    }
-                };
-                path = path.map(|mut p| {
-                    p.push(new_path);
-                    p
-                });
-            }
-
-            "language" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg1.next_sibling()?.next_sibling()?));
-                new_lang = Some(String::from(tmp.as_str()));
-            }
-
-            "string" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg1.next_sibling()?.next_sibling()?));
-                new_code = Some(String::from(tmp.as_str()));
-            }
-            other => {
-                eprintln!(
-                    "Warning: unable to handle polyglot call argument {other} at position {}",
-                    arg1.start_position()
-                );
-                return None;
-            }
-        }
-
-        match self.node_to_code(arg2) {
-            "path" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg2.next_sibling()?.next_sibling()?));
-                path = Some(self.working_dir.clone());
-                let new_path = match PathBuf::from_str(tmp.as_str()) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        eprintln!(
-                            "Warning: could not build subtree for {} because of error {e}",
-                            tmp.as_str()
-                        );
-                        return None;
-                    }
-                };
-                path = path.map(|mut p| {
-                    p.push(new_path);
-                    p
-                });
-            }
-
-            "language" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg2.next_sibling()?.next_sibling()?));
-                new_lang = Some(String::from(tmp.as_str()));
-            }
-
-            "string" => {
-                let tmp =
-                    util::strip_quotes(self.node_to_code(arg2.next_sibling()?.next_sibling()?));
-
-                new_code = Some(String::from(tmp.as_str()));
-            }
-
-            other => {
-                eprintln!(
-                    "Warning: unable to handle polyglot call argument {other} at position {}",
-                    arg2.start_position()
-                );
-                return None;
-            }
-        }
+        self.process_argument(arg1, &mut path, &mut new_lang, &mut new_code)?;
+        self.process_argument(arg2, &mut path, &mut new_lang, &mut new_code)?;
 
         // We convert the language, if there was one
         let new_lang = match new_lang {
@@ -542,6 +508,44 @@ impl PolyglotTree {
             )?,
         };
         Some(subtree)
+    }
+
+    fn process_argument(&self, arg: Node, path: &mut Option<PathBuf>, new_lang: &mut Option<String>, new_code: &mut Option<String>) -> Option<()> {
+        let tmp = util::strip_quotes(self.node_to_code(arg.next_sibling()?.next_sibling()?));
+
+        match self.node_to_code(arg) {
+            "path" => {
+                *path = Some(self.working_dir.clone());
+                let new_path = match PathBuf::from_str(tmp.as_str()) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: could not build subtree for {} because of error {e}",
+                            tmp.as_str()
+                        );
+                        return None;
+                    }
+                };
+                *path = path.as_mut().map(|p| {
+                    p.push(new_path);
+                    p.clone()
+                });
+            }
+            "language" => {
+                *new_lang = Some(String::from(tmp.as_str()));
+            }
+            "string" => {
+                *new_code = Some(String::from(tmp.as_str()));
+            }
+            other => {
+                eprintln!(
+                    "Warning: unable to handle polyglot call argument {other} at position {}",
+                    arg.start_position()
+                );
+                return None;
+            }
+        }
+        Some(())
     }
 
     fn make_subtree_js(&self, node: &Node) -> Option<PolyglotTree> {
