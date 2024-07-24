@@ -2,7 +2,9 @@
 #include <graalvm/llvm/polyglot.h>
 
 void main() {
-    int x = 42;
+    int8_t x = 42;
     polyglot_export("x", x);
-    void* y = polyglot_eval_file("c", "import_x.c");
+    void* evaluated = polyglot_eval_file("llvm", "hello.ll");
+
+    int8_t y = polyglot_as_i8(evaluated);
 }

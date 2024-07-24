@@ -1,7 +1,8 @@
 use super::*;
 use std::path::PathBuf;
+use crate::polyglot_language::{Java, JavaScript, PolyLanguage, Python};
 
-fn assert_ast_eq(test_file: &str, expected_file: &str, lang: util::Language) {
+fn assert_ast_eq(test_file: &str, expected_file: &str, lang: Box<dyn PolyLanguage>) {
     let file = PathBuf::from(test_file);
     let expected = PathBuf::from(expected_file);
 
@@ -22,7 +23,7 @@ fn python_test() {
     let file_test = "TestSamples/export_x.py";
     let file_expect = "TestSamples/export_x_expected.txt";
 
-    assert_ast_eq(file_test, file_expect, util::Language::Python)
+    assert_ast_eq(file_test, file_expect, Box::new(Python{}))
 }
 
 #[test]
@@ -30,7 +31,7 @@ fn js_test() {
     let file_test = "TestSamples/test_pyprint.js";
     let file_expect = "TestSamples/test_pyprint_expected.txt";
 
-    assert_ast_eq(file_test, file_expect, util::Language::JavaScript)
+    assert_ast_eq(file_test, file_expect, Box::new(JavaScript{}))
 }
 
 #[test]
@@ -38,7 +39,7 @@ fn js_test_file() {
     let file_test = "TestSamples/test_pyprint_file.js";
     let file_expect = "TestSamples/test_pyprint_expected.txt";
 
-    assert_ast_eq(file_test, file_expect, util::Language::JavaScript)
+    assert_ast_eq(file_test, file_expect, Box::new(JavaScript{}))
 }
 
 #[test]
@@ -46,5 +47,5 @@ fn java_test() {
     let file_test = "TestSamples/JavaTest.java";
     let file_expect = "TestSamples/JavaTest_expected.txt";
 
-    assert_ast_eq(file_test, file_expect, util::Language::Java)
+    assert_ast_eq(file_test, file_expect, Box::new(Java{}))
 }

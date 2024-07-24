@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::polyglot_language::{C, Java, JavaScript, PolyLanguage, Python};
+
 #[derive(Error, Debug)]
 #[error("Invalid argument received")]
 pub struct InvalidArgumentError;
@@ -62,7 +64,7 @@ pub fn strip_quotes(s: &str) -> String {
 pub fn language_string_to_treesitter(
     lang: &str,
 ) -> Result<tree_sitter::Language, InvalidArgumentError> {
-    Ok(language_enum_to_treesitter(&language_string_to_enum(lang)?))
+    language_struct_to_treesitter(&language_string_to_struct(lang)?)
 }
 
 /// Returns the treesitter language corresponding to the Language enum reference passed.
@@ -70,18 +72,25 @@ pub fn language_string_to_treesitter(
 /// # Example
 /// ```
 /// use polyglot_ast::util;
+/// use polyglot_ast::util::InvalidArgumentError;
+/// use polyglot_ast::polyglot_language::{C, PolyLanguage};
 /// use util::Language;
 ///
-/// let language = util::language_enum_to_treesitter(&Language::Python);
+/// let c: Box<(dyn PolyLanguage)> = Box::new(C{});
 ///
-/// assert_eq!(language, tree_sitter_python::language());
+/// let language: Result<tree_sitter::Language, InvalidArgumentError> = util::language_struct_to_treesitter(&c);
+///
+/// assert_eq!(language.is_ok(), true);
+/// assert_eq!(language.unwrap(), tree_sitter_c::language());
 /// ```
-pub fn language_enum_to_treesitter(lang: &Language) -> tree_sitter::Language {
-    match lang {
-        Language::Python => tree_sitter_python::language(),
-        Language::JavaScript => tree_sitter_javascript::language(),
-        Language::Java => tree_sitter_java::language(),
-        Language::C => tree_sitter_c::language(),
+pub fn language_struct_to_treesitter(lang: &Box<dyn PolyLanguage>) -> Result<tree_sitter::Language, InvalidArgumentError> {
+    match lang.get_lang_name() {
+        "python" => Ok(tree_sitter_python::language()),
+        "javascript" => Ok(tree_sitter_javascript::language()),
+        "java" => Ok(tree_sitter_java::language()),
+        "c" => Ok(tree_sitter_c::language()),
+
+        _ => Err(InvalidArgumentError)
     }
 }
 
@@ -91,11 +100,13 @@ pub fn language_enum_to_treesitter(lang: &Language) -> tree_sitter::Language {
 /// Valid use-case:
 /// ```
 /// use polyglot_ast::util;
+/// use polyglot_ast::polyglot_language::{PolyLanguage, Python};
 /// use util::Language;
 ///
-/// let language = util::language_string_to_enum("python").expect("Python is a supported polyglot AST language");
+/// let language: Box<dyn PolyLanguage> = util::language_string_to_struct("python").expect("Python is a supported polyglot AST language");
+/// let python = Box::new(Python{});
 ///
-/// assert!(matches!(language, Language::Python));
+/// assert!(matches!(language, python));
 /// ```
 /// Invalid use-case:
 /// ```
@@ -108,12 +119,12 @@ pub fn language_enum_to_treesitter(lang: &Language) -> tree_sitter::Language {
 ///     Err(e) => e,
 /// };
 /// ```
-pub fn language_string_to_enum(lang: &str) -> Result<Language, InvalidArgumentError> {
+pub fn language_string_to_struct(lang: &str) -> Result<Box<dyn PolyLanguage>, InvalidArgumentError> {
     match lang {
-        "python" => Ok(Language::Python),
-        "js" | "javascript" => Ok(Language::JavaScript),
-        "java" => Ok(Language::Java),
-        "c" => Ok(Language::C),
+        "python" => Ok(Box::new(Python{})),
+        "js" | "javascript" => Ok(Box::new(JavaScript{})),
+        "java" => Ok(Box::new(Java{})),
+        "c" => Ok(Box::new(C{})),
         _ => Err(InvalidArgumentError),
     }
 }

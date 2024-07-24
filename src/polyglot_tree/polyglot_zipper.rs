@@ -1,8 +1,9 @@
 use tree_sitter::{Node, TreeCursor};
 
-use super::util::{InvalidArgumentError, Language};
+use crate::polyglot_language::PolyLanguage;
 
 use super::PolyglotTree;
+use super::util::InvalidArgumentError;
 
 /// A PolyglotZipper is an object based on a PolyglotTree, which contains one of the tree's nodes.
 /// Zippers allow navigation of the tree and retrieval of node properties for analysis tasks.
@@ -73,14 +74,15 @@ impl PolyglotZipper<'_> {
 
     pub fn get_binding_name(&self) -> Result<String, InvalidArgumentError> {
         if self.is_polyglot_import_call() || self.is_polyglot_export_call() {
-            return match self.get_lang() {
-                Language::Python => match self.get_python_binding() {
+            return match self.get_lang().get_lang_name() {
+                "python" => match self.get_python_binding() {
                     Some(s) => Ok(s),
                     None => Err(InvalidArgumentError), // todo: make this into a proper error enum
                 },
-                Language::JavaScript => todo!(),
-                Language::Java => todo!(),
-                Language::C => todo!(),
+                "javascript" => todo!(),
+                "java" => todo!(),
+                "c" => todo!(),
+                _ => Err(InvalidArgumentError)
             };
         }
         Err(InvalidArgumentError)
@@ -91,7 +93,7 @@ impl PolyglotZipper<'_> {
     }
 
     /// Get the Language associated with the contained node.
-    pub fn get_lang(&self) -> &Language {
+    pub fn get_lang(&self) -> &Box<dyn PolyLanguage> {
         &self.tree.language
     }
 
