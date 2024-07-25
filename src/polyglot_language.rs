@@ -1,5 +1,6 @@
 use tree_sitter::Node;
 use crate::PolyglotZipper;
+use crate::util::InvalidArgumentError;
 
 pub struct Python {}
 
@@ -45,6 +46,10 @@ impl PolyLanguage for Python {
 
     fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
         Some(String::from(zipper.child(1)?.child(1)?.code()))
+    }
+
+    fn get_treesitter_language(&self) -> Result<tree_sitter::Language, InvalidArgumentError> {
+        Ok(tree_sitter_python::language())
     }
 }
 pub struct JavaScript {}
@@ -93,6 +98,10 @@ impl PolyLanguage for JavaScript {
     fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
         None
     }
+
+    fn get_treesitter_language(&self) -> Result<tree_sitter::Language, InvalidArgumentError> {
+        Ok(tree_sitter_javascript::language())
+    }
 }
 pub struct Java {}
 
@@ -138,6 +147,10 @@ impl PolyLanguage for Java {
 
     fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
         None
+    }
+
+    fn get_treesitter_language(&self) -> Result<tree_sitter::Language, InvalidArgumentError> {
+        Ok(tree_sitter_java::language())
     }
 }
 pub struct C {}
@@ -186,6 +199,10 @@ impl PolyLanguage for C {
     fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
         None
     }
+
+    fn get_treesitter_language(&self) -> Result<tree_sitter::Language, InvalidArgumentError> {
+        Ok(tree_sitter_c::language())
+    }
 }
 
 pub trait PolyLanguage {
@@ -212,4 +229,5 @@ pub trait PolyLanguage {
 
     fn get_args<'a>(&self, node: &'a Node) -> Option<(Node<'a>, Node<'a>, Option<Node<'a>>)>;
     fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String>;
+    fn get_treesitter_language(&self) -> Result<tree_sitter::Language, InvalidArgumentError>;
 }

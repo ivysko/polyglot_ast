@@ -84,14 +84,7 @@ pub fn language_string_to_treesitter(
 /// assert_eq!(language.unwrap(), tree_sitter_c::language());
 /// ```
 pub fn language_struct_to_treesitter(lang: &Box<dyn PolyLanguage>) -> Result<tree_sitter::Language, InvalidArgumentError> {
-    match lang.get_lang_name() {
-        "python" => Ok(tree_sitter_python::language()),
-        "javascript" => Ok(tree_sitter_javascript::language()),
-        "java" => Ok(tree_sitter_java::language()),
-        "c" => Ok(tree_sitter_c::language()),
-
-        _ => Err(InvalidArgumentError)
-    }
+    lang.get_treesitter_language()
 }
 
 /// Returns the Language enum corresponding to the passed string slice
