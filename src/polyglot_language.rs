@@ -1,4 +1,5 @@
 use tree_sitter::Node;
+use crate::PolyglotZipper;
 
 pub struct Python {}
 
@@ -40,6 +41,10 @@ impl PolyLanguage for Python {
         let arg2 = node.child(1)?.child(3)?.child(0)?;
 
         Some((arg1, arg2, None))
+    }
+
+    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+        Some(String::from(zipper.child(1)?.child(1)?.code()))
     }
 }
 pub struct JavaScript {}
@@ -84,6 +89,10 @@ impl PolyLanguage for JavaScript {
 
         Some((arg1, arg2, Some(call_type)))
     }
+
+    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+        None
+    }
 }
 pub struct Java {}
 
@@ -125,6 +134,10 @@ impl PolyLanguage for Java {
         let arg2 = node.child(3)?.child(3)?; // code
 
         Some((arg1, arg2, None))
+    }
+
+    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+        None
     }
 }
 pub struct C {}
@@ -169,6 +182,10 @@ impl PolyLanguage for C {
 
         Some((arg1, arg2, Some(call_type)))
     }
+
+    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+        None
+    }
 }
 
 pub trait PolyLanguage {
@@ -194,4 +211,5 @@ pub trait PolyLanguage {
     fn use_positional_args(&self) -> bool;
 
     fn get_args<'a>(&self, node: &'a Node) -> Option<(Node<'a>, Node<'a>, Option<Node<'a>>)>;
+    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String>;
 }

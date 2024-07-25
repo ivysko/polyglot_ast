@@ -74,22 +74,12 @@ impl PolyglotZipper<'_> {
 
     pub fn get_binding_name(&self) -> Result<String, InvalidArgumentError> {
         if self.is_polyglot_import_call() || self.is_polyglot_export_call() {
-            return match self.get_lang().get_lang_name() {
-                "python" => match self.get_python_binding() {
-                    Some(s) => Ok(s),
-                    None => Err(InvalidArgumentError), // todo: make this into a proper error enum
-                },
-                "javascript" => todo!(),
-                "java" => todo!(),
-                "c" => todo!(),
-                _ => Err(InvalidArgumentError)
+            return match self.get_lang().get_binding(self) {
+                None => todo!(),
+                Some(binding) => Ok(binding)
             };
         }
         Err(InvalidArgumentError)
-    }
-
-    fn get_python_binding(&self) -> Option<String> {
-        Some(String::from(self.child(1)?.child(1)?.code()))
     }
 
     /// Get the Language associated with the contained node.
