@@ -21,6 +21,26 @@ impl PolyLanguage for Python {
         "python"
     }
 
+    fn get_code_eval_arg(&self) -> Option<&str> {
+        Some("string")
+    }
+
+    fn get_code_eval_file_arg(&self) -> Option<&str> {
+        Some("path")
+    }
+
+    fn get_lang_arg(&self) -> Option<&str> {
+        Some("language")
+    }
+
+    fn get_code_eval(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval_file(&self) -> Option<&str> {
+        None
+    }
+
     fn is_polyglot_eval_call(&self, node_code: &str) -> bool {
         matches!(node_code, "polyglot.eval")
     }
@@ -71,6 +91,26 @@ impl PolyLanguage for JavaScript {
         "javascript"
     }
 
+    fn get_code_eval_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval_file_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_lang_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval(&self) -> Option<&str> {
+        Some("eval")
+    }
+
+    fn get_code_eval_file(&self) -> Option<&str> {
+        Some("evalFile")
+    }
+
     fn is_polyglot_eval_call(&self, node_code: &str) -> bool {
         matches!(node_code, "Polyglot.eval" | "Polyglot.evalFile")
     }
@@ -95,7 +135,7 @@ impl PolyLanguage for JavaScript {
         Some((arg1, arg2, Some(call_type)))
     }
 
-    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+    fn get_binding(&self, _zipper: &PolyglotZipper) -> Option<String> {
         None
     }
 
@@ -122,6 +162,26 @@ impl PolyLanguage for Java {
         "java"
     }
 
+    fn get_code_eval_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval_file_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_lang_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval(&self) -> Option<&str> {
+        Some("eval")
+    }
+
+    fn get_code_eval_file(&self) -> Option<&str> {
+        None
+    }
+
     fn is_polyglot_eval_call(&self, node_code: &str) -> bool {
         matches!(node_code, "eval")
     }
@@ -145,7 +205,7 @@ impl PolyLanguage for Java {
         Some((arg1, arg2, None))
     }
 
-    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+    fn get_binding(&self, _zipper: &PolyglotZipper) -> Option<String> {
         None
     }
 
@@ -172,6 +232,26 @@ impl PolyLanguage for C {
         "c"
     }
 
+    fn get_code_eval_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval_file_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_lang_arg(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_code_eval(&self) -> Option<&str> {
+        Some("polyglot_eval")
+    }
+
+    fn get_code_eval_file(&self) -> Option<&str> {
+        Some("polyglot_eval_file")
+    }
+
     fn is_polyglot_eval_call(&self, node_code: &str) -> bool {
         matches!(node_code, "polyglot_eval" | "polyglot_eval_file")
     }
@@ -196,7 +276,7 @@ impl PolyLanguage for C {
         Some((arg1, arg2, Some(call_type)))
     }
 
-    fn get_binding(&self, zipper: &PolyglotZipper) -> Option<String> {
+    fn get_binding(&self, _zipper: &PolyglotZipper) -> Option<String> {
         None
     }
 
@@ -220,6 +300,13 @@ pub trait PolyLanguage {
     fn get_child_node_kind(&self) -> &'static str;
 
     fn get_lang_name(&self) -> &'static str;
+
+    fn get_code_eval_arg(&self) -> Option<&str>;
+    fn get_code_eval_file_arg(&self) -> Option<&str>;
+    fn get_lang_arg(&self) -> Option<&str>;
+
+    fn get_code_eval(&self) -> Option<&str>;
+    fn get_code_eval_file(&self) -> Option<&str>;
 
     fn is_polyglot_eval_call(&self, node_code: &str) -> bool;
     fn is_polyglot_import_call(&self, node_code: &str) -> bool;
