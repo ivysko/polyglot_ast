@@ -407,7 +407,8 @@ impl PolyglotTree {
     }
 
     fn process_argument(&self, arg: Node, path: &mut Option<PathBuf>, new_lang: &mut Option<String>, new_code: &mut Option<String>) -> Option<()> {
-        let tmp = util::strip_quotes(self.node_to_code(arg.next_sibling()?.next_sibling()?));
+        let value_node = arg.next_sibling()?.next_sibling()?;
+        let tmp = util::strip_quotes(self.node_to_code(value_node));
 
         let arg_code = self.node_to_code(arg);
 
